@@ -103,7 +103,7 @@ def find_markdown_files(folder):
 """
 if __name__ == "__main__":
     # 设置 Markdown 文件所在文件夹
-    md_folder = "C:\\Users\\codeh\\Desktop\\CSNote\\Project"  # 替换为你的 Markdown 文件所在文件夹
+    md_folder = "C:\\Users\\codeh\\Desktop\\CSNote"  # 替换为你的 Markdown 文件所在文件夹
 
     # 递归查找所有 Markdown 文件
     md_files = find_markdown_files(md_folder)

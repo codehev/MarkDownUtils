@@ -80,12 +80,17 @@ def replace_image_links(md_content, folder, md_file):
 
     return new_content
 
-def process_markdown_file(md_file, image_folder):
+def process_markdown_file(md_file, image_folder=None):
     """
     处理单个 Markdown 文件，下载在线图片并替换链接
     :param md_file: Markdown 文件路径
-    :param image_folder: 图片保存文件夹
+    :param image_folder: 图片保存文件夹（可选，默认为 ./image/markdown文件名）
     """
+    # 如果未提供 image_folder，则设置为默认路径
+    if image_folder is None:
+        md_file_name = os.path.splitext(os.path.basename(md_file))[0]
+        image_folder = os.path.join(os.path.dirname(md_file), "image", md_file_name)
+
     # 创建图片保存文件夹
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
@@ -116,11 +121,16 @@ def process_markdown_file(md_file, image_folder):
 性能优化：减少不必要的字符串操作，提升效率。
 可读性和可维护性：代码结构更清晰，便于扩展和维护。
 用户体验：提供更详细的日志信息和进度条，方便跟踪处理进度。
+
+add: 将 image_folder 设置为可选参数，并默认将其保存在 Markdown 文件所在目录的 ./image/markdown文件名 目录下。
+
+注意：可能复制粘贴时，图片出现问题，变成base64无法显示，需要手动修复，ctrl+f，搜索data:image/png;
 """
 if __name__ == "__main__":
-    # 设置 Markdown 文件路径和图片保存文件夹
-    md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\bi.md"  # 替换为你的 Markdown 文件路径
-    image_folder = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\image\\bi"  # 图片保存文件夹
+    # 设置 Markdown 文件路径
+    md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\api.md"  # 替换为你的 Markdown 文件路径
+    # md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Backend\\SSM\\SpringBoot.md"  # 替换为你的 Markdown 文件路径
+    image_folder = None # 可选参数，图片保存目录，设置为 None 表示使用默认路径：./image/markdown文件名
 
-    # 处理 Markdown 文件
+    # 处理 Markdown 文件，image_folder 为可选参数
     process_markdown_file(md_file, image_folder)
