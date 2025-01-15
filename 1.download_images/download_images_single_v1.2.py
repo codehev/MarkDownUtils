@@ -119,8 +119,8 @@ def process_markdown_file(md_file, image_folder):
 """
 if __name__ == "__main__":
     # 设置 Markdown 文件路径和图片保存文件夹
-    md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\api.md"  # 替换为你的 Markdown 文件路径
-    image_folder = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\image\\api"  # 图片保存文件夹
+    md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\oj.md"  # 替换为你的 Markdown 文件路径
+    image_folder = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\image\\oj"  # 图片保存文件夹
 
     # 处理 Markdown 文件
     process_markdown_file(md_file, image_folder)

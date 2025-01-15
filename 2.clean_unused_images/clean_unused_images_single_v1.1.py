@@ -90,7 +90,7 @@ Markdown 文件：C:\\Users\\codeh\\Desktop\\CSNote\\Project\\api.md
 """
 if __name__ == "__main__":
     # 设置 Markdown 文件路径
-    md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\api.md"  # 替换为你的 Markdown 文件路径
+    md_file = "C:\\Users\\codeh\\Desktop\\CSNote\\Project\\oj.md"  # 替换为你的 Markdown 文件路径
 
     # 删除未使用的图片
     delete_unused_images(md_file)
