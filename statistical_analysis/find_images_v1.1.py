@@ -1,6 +1,6 @@
 import os
 import re
-import csv
+import pandas as pd
 
 def find_images_in_markdown(file_path):
     """
@@ -63,34 +63,62 @@ def traverse_directory(directory):
 
     return results
 
-def save_results_to_csv(results, output_file):
+def save_results_to_excel(results, output_file):
     """
-    将结果保存到 CSV 文件中。
+    将结果保存到 Excel 文件中，包含两个 Sheet：
+    - Sheet1: 按文件路径统计
+    - Sheet2: 按目录结构分类统计
     """
     try:
-        with open(output_file, 'w', newline='', encoding='utf-8-sig') as csvfile:  # 使用 utf-8-sig 编码
-            fieldnames = ["文件路径", "Base64 图片", "本地图片", "网络图片", "HTML 图片"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        # 创建按文件路径统计的 DataFrame
+        file_stats = []
+        for file_path, stats in results.items():
+            file_stats.append({
+                "文件路径": file_path,
+                "Base64 图片": stats["base64"],
+                "本地图片": stats["local"],
+                "网络图片": stats["network"],
+                "HTML 图片": stats["html"],
+            })
+        df_file_stats = pd.DataFrame(file_stats)
 
-            # 写入表头
-            writer.writeheader()
-            # 写入数据
-            for file_path, stats in results.items():
-                writer.writerow({
-                    "文件路径": file_path,
-                    "Base64 图片": stats["base64"],
-                    "本地图片": stats["local"],
-                    "网络图片": stats["network"],
-                    "HTML 图片": stats["html"],
-                })
+        # 创建按目录结构分类统计的 DataFrame
+        dir_stats = {}
+        for file_path, stats in results.items():
+            dir_path = os.path.dirname(file_path)
+            if dir_path not in dir_stats:
+                dir_stats[dir_path] = {
+                    "Base64 图片": 0,
+                    "本地图片": 0,
+                    "网络图片": 0,
+                    "HTML 图片": 0,
+                }
+            dir_stats[dir_path]["Base64 图片"] += stats["base64"]
+            dir_stats[dir_path]["本地图片"] += stats["local"]
+            dir_stats[dir_path]["网络图片"] += stats["network"]
+            dir_stats[dir_path]["HTML 图片"] += stats["html"]
+        df_dir_stats = pd.DataFrame([
+            {"目录路径": dir_path, **stats} for dir_path, stats in dir_stats.items()
+        ])
+
+        # 将两个 DataFrame 写入同一个 Excel 文件的不同 Sheet
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df_file_stats.to_excel(writer, sheet_name="按文件路径统计", index=False)
+            df_dir_stats.to_excel(writer, sheet_name="按目录结构统计", index=False)
+
         print(f"结果已保存到 {output_file}")
     except Exception as e:
-        print(f"无法保存结果到 CSV 文件: {e}")
+        print(f"无法保存结果到 Excel 文件: {e}")
+"""
+主要目的是为了。复制过来是，有没有无效的base64图片
 
+保持按文件路径统计的同时
+add: 新增一个Sheet按目录结构分类统计
+"""
 if __name__ == "__main__":
     # 直接在代码中设置文件夹路径和输出文件路径
     directory = "C:\\Users\\codeh\\Desktop\\CSNote"  # 修改为你的目标文件夹路径
-    output_file = "images_stats_report.csv"  # 结果输出文件路径
+    output_file = "images_stats_report.xlsx"  # 结果输出文件路径
 
     # 遍历目录并查找图片
     results = traverse_directory(directory)
@@ -107,5 +135,5 @@ if __name__ == "__main__":
     else:
         print("没有找到包含图片的 Markdown 文件。")
 
-    # 将结果保存到 CSV 文件
-    save_results_to_csv(results, output_file)
+    # 将结果保存到 Excel 文件
+    save_results_to_excel(results, output_file)

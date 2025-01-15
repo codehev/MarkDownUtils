@@ -1,8 +1,29 @@
 import os
 import re
+import urllib.parse
 from tqdm import tqdm  # 导入 tqdm 库
 
-def extract_used_images(md_content):
+def contains_url_encoding(path):
+    """检查路径中是否包含合法的 URL 编码"""
+    # URL 编码的格式是 % 后跟两个十六进制字符
+    url_encoding_pattern = r"%[0-9A-Fa-f]{2}"
+    # re.search执行正则搜索的工具方法
+    # 不去手动对匹配到得部分分别进行解码，而是只要包含，说明就是URL编码了，返回true，就给解码的工具类去进行解码就行
+    return re.search(url_encoding_pattern, path) is not None
+
+def decode_path_if_encoded(path):
+    """如果路径包含合法的 URL 编码，则进行解码，否则返回原始路径"""
+    if contains_url_encoding(path):
+        try:
+            # urllib.parse.unquote 函数对未编码的 URL 进行解码时，
+            # 不会产生任何错误或副作用，只是原样返回输入。因此，我们完全可以直接对所有 URL 进行解码，而无需先判断是否编码。
+            return urllib.parse.unquote(path)
+        except Exception as e:
+            print(f"解码路径失败: {path}, 错误: {e}")
+            return path
+    return path
+
+def extract_used_images(md_content, md_file):
     """从 Markdown 内容中提取所有使用的图片路径"""
     used_images = set()
 
@@ -10,13 +31,23 @@ def extract_used_images(md_content):
     md_pattern = r"!\[.*?\]\((.*?)(?:\s+\".*?\")?\)"  # 支持带标题的图片
     for match in re.findall(md_pattern, md_content):
         if not match.startswith(("http://", "https://", "data:image")):
-            used_images.add(os.path.normpath(match))  # 规范化路径
+            # 对路径进行解码（如果需要）
+            decoded_path = decode_path_if_encoded(match)
+            # 将路径转换为绝对路径
+            abs_path = os.path.normpath(os.path.join(os.path.dirname(md_file), decoded_path))
+            print(f"提取的图片路径 (Markdown): {match} -> {abs_path}")
+            used_images.add(abs_path)
 
     # 正则表达式匹配 HTML <img> 标签中的图片链接
     html_pattern = r"<img.*?src=[\"'](.*?)[\"'].*?>"  # 支持带属性和样式的图片
     for match in re.findall(html_pattern, md_content):
         if not match.startswith(("http://", "https://", "data:image")):
-            used_images.add(os.path.normpath(match))  # 规范化路径
+            # 对路径进行解码（如果需要）
+            decoded_path = decode_path_if_encoded(match)
+            # 将路径转换为绝对路径
+            abs_path = os.path.normpath(os.path.join(os.path.dirname(md_file), decoded_path))
+            print(f"提取的图片路径 (HTML): {match} -> {abs_path}")
+            used_images.add(abs_path)
 
     # 正则表达式匹配 Markdown 引用格式的图片链接
     ref_pattern = r"\[.*?\]\[(.*?)\]"  # 匹配引用标识
@@ -24,7 +55,12 @@ def extract_used_images(md_content):
     ref_links = dict(re.findall(ref_link_pattern, md_content, re.MULTILINE))
     for match in re.findall(ref_pattern, md_content):
         if match in ref_links and not ref_links[match].startswith(("http://", "https://", "data:image")):
-            used_images.add(os.path.normpath(ref_links[match]))  # 规范化路径
+            # 对路径进行解码（如果需要）
+            decoded_path = decode_path_if_encoded(ref_links[match])
+            # 将路径转换为绝对路径
+            abs_path = os.path.normpath(os.path.join(os.path.dirname(md_file), decoded_path))
+            print(f"提取的图片路径 (引用): {ref_links[match]} -> {abs_path}")
+            used_images.add(abs_path)
 
     return used_images
 
@@ -45,14 +81,15 @@ def delete_unused_images(md_files):
         # 提取当前 Markdown 文件中使用的图片路径
         with open(md_file, "r", encoding="utf-8") as f:
             content = f.read()
-        used_images = extract_used_images(content)
+        used_images = extract_used_images(content, md_file)
 
         # 获取图片文件夹中的所有文件
         all_images = set()
         for root, _, files in os.walk(image_folder):
             for file in files:
-                file_path = os.path.relpath(os.path.join(root, file), os.path.dirname(md_file))  # 相对于 Markdown 文件的路径
-                all_images.add(os.path.normpath(file_path))  # 规范化路径
+                file_path = os.path.normpath(os.path.join(root, file))
+                print(f"图片文件夹中的文件: {file_path}")
+                all_images.add(file_path)
 
         # 找到未使用的图片
         unused_images = all_images - used_images
@@ -65,7 +102,7 @@ def delete_unused_images(md_files):
             print(f"未使用的图片数量: {len(unused_images)}")
             for image in tqdm(unused_images, desc="删除未使用的图片", unit="图片"):
                 try:
-                    os.remove(os.path.join(os.path.dirname(md_file), image))
+                    os.remove(image)
                     print(f"删除成功: {image}")
                 except Exception as e:
                     print(f"删除失败: {image}, 错误: {e}")
@@ -83,28 +120,21 @@ def find_markdown_files(folder):
             if file.endswith(".md"):
                 md_files.append(os.path.join(root, file))
     return md_files
-# 递归清理指定文件夹下的markdown文件未使用的图片（就是能递归处理子文件夹下的markdown文件）
-# 图片路径已经固定为 ./image/markdown文件名
-
 """
-改进点说明
-支持带标题的 Markdown 图片：
-正则表达式 r"!\[.*?\]\((.*?)(?:\s+\".*?\")?\)" 支持匹配带标题的图片。
+Typora支持插入时自动转义图片URL，有些特殊字符（含中文）会被转义，所以得先解码URL再去找图片
+目前我是开启了转义功能
 
-支持带属性和样式的 HTML 图片：
-正则表达式 r"<img.*?src=[\"'](.*?)[\"'].*?>" 支持匹配带属性和样式的图片。
-
-支持 Markdown 引用格式的图片：
-正则表达式 r"\[.*?\]\[(.*?)\]" 和 r"\[(.*?)\]:\s*(.*?)(?:\s+\".*?\")?\s*$" 支持匹配引用格式的图片。
-
-忽略 Base64 图片：
-脚本会忽略以 data:image 开头的 Base64 图片。
+add: 支持解码URL
+URL 不一定被转义，直接对所有路径进行 URL 解码可能会导致问题。
 
 
-bug：对于转义的图片会误删
-例如：image/DesignPattern/工厂模式.png（实际保存）会转义为：image/DesignPattern/%E6%8E%A5%E5%8F%A3%E9.png（md中显示）
+URL 编码的格式是 % 后跟两个十六进制字符（如 %20、%E6）。
+如果 % 后不是两个十六进制字符，则认为它是普通字符，不需要解码。
 
-不是放入回收站，git没法恢复
+
+urllib.parse.unquote 函数对未编码的 URL 进行解码时，
+不会产生任何错误或副作用，只是原样返回输入。因此，我们完全可以直接对所有 URL 进行解码，而无需先判断是否编码。
+暂时没去掉判断是否编码，但也不影响
 
 """
 if __name__ == "__main__":
