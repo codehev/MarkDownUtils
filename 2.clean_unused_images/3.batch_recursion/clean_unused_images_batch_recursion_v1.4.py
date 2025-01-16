@@ -148,6 +148,7 @@ def find_markdown_files(path):
 
 fix: 解决image-20211218093256771.png被误删的问题，是由于all_images和used_images这两set加入的文件路径规范不一样
 即使两set都有该图片路径，但all_images-used_images的结果还会保留该图片
+使用 os.path.abspath 和 os.path.normpath 统一路径格式，确保路径在集合中完全一致。
 
 关键改进点
 路径规范化：
