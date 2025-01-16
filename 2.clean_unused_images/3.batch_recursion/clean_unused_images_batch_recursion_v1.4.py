@@ -104,7 +104,7 @@ def delete_unused_images(md_files, image_folder="image"):
                 print(f"{ICON_FILE} 图片文件夹中的文件: {file_path}")
                 all_images.add(file_path)
 
-        # 找到未使用的图片
+        # 找到未使用的图片，集合差集
         unused_images = all_images - used_images
         total_unused_count += len(unused_images)
 
