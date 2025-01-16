@@ -91,12 +91,12 @@ def extract_used_images(md_content, md_file):
 
     return used_images
 
-def delete_unused_images(md_files, image_folder="image", backup_folder="backup"):
+def delete_unused_images(md_files, image_folder="image", backup_folder="backup", enable_backup=True):
     """删除未使用的图片"""
     total_unused_count = 0  # 总未使用图片数量
 
-    # 创建备份文件夹
-    if not os.path.exists(backup_folder):
+    # 如果启用备份功能，创建备份文件夹
+    if enable_backup and not os.path.exists(backup_folder):
         os.makedirs(backup_folder)
         logging.info(f"创建备份文件夹: {backup_folder}")
 
@@ -104,7 +104,7 @@ def delete_unused_images(md_files, image_folder="image", backup_folder="backup")
     with ThreadPoolExecutor() as executor:
         futures = []
         for md_file in md_files:
-            futures.append(executor.submit(process_markdown_file, md_file, image_folder, backup_folder))
+            futures.append(executor.submit(process_markdown_file, md_file, image_folder, backup_folder, enable_backup))
 
         for future in tqdm(as_completed(futures), total=len(futures), desc="处理 Markdown 文件", unit="文件"):
             unused_count = future.result()
@@ -113,7 +113,7 @@ def delete_unused_images(md_files, image_folder="image", backup_folder="backup")
     logging.info(f"所有文件处理完成！")
     logging.info(f"总未使用的图片数量: {total_unused_count}")
 
-def process_markdown_file(md_file, image_folder, backup_folder):
+def process_markdown_file(md_file, image_folder, backup_folder, enable_backup):
     """处理单个 Markdown 文件"""
     unused_count = 0
 
@@ -154,12 +154,17 @@ def process_markdown_file(md_file, image_folder, backup_folder):
         logging.warning(f"未使用的图片数量: {unused_count}")
         for image in unused_images:
             try:
-                # 备份未使用的图片
-                backup_path = os.path.join(backup_folder, os.path.basename(image))
-                shutil.move(image, backup_path)
-                logging.info(f"备份成功: {image} -> {backup_path}")
+                if enable_backup:
+                    # 备份未使用的图片
+                    backup_path = os.path.join(backup_folder, os.path.basename(image))
+                    shutil.move(image, backup_path)
+                    logging.info(f"备份成功: {image} -> {backup_path}")
+                else:
+                    # 直接删除未使用的图片
+                    os.remove(image)
+                    logging.info(f"删除成功: {image}")
             except Exception as e:
-                logging.error(f"备份失败: {image}, 错误: {e}")
+                logging.error(f"操作失败: {image}, 错误: {e}")
     else:
         logging.info(f"文件 {md_file} 没有未使用的图片。")
 
@@ -181,21 +186,16 @@ def find_markdown_files(path):
         logging.error(f"路径 {path} 不是有效的 Markdown 文件或目录。")
     return md_files
 """
-优化点
-备份功能：
-在删除未使用的图片之前，先将其备份到 backup 文件夹中，防止误删。
+关键改进点
+新增 enable_backup 参数：
+在 delete_unused_images 和 process_markdown_file 函数中增加了 enable_backup 参数。
+如果 enable_backup 为 True，则备份未使用的图片；如果为 False，则直接删除未使用的图片。
+
+备份功能控制：
+在 __main__ 中，可以通过设置 enable_backup = True 或 enable_backup = False 来控制是否启用备份功能。
 
 日志记录：
-使用 logging 模块记录脚本的运行日志，方便后续查看和分析。
-
-多线程支持：
-使用 ThreadPoolExecutor 实现多线程处理，加速 Markdown 文件的处理。
-
-路径规范化：
-使用 os.path.abspath 和 os.path.normpath 统一路径格式，确保路径在集合中完全一致。
-
-错误处理：
-增加更多的异常处理逻辑，确保脚本的健壮性。
+在备份或删除操作后，记录操作结果到日志文件中。
 """
 if __name__ == "__main__":
     # 设置 Markdown 文件或目录路径
@@ -207,9 +207,12 @@ if __name__ == "__main__":
     # 设置备份文件夹（绝对路径）
     backup_folder = "backup"
 
+    # 是否启用备份功能
+    enable_backup = False  # 设置为 False 以禁用备份
+
     # 查找所有 Markdown 文件
     md_files = find_markdown_files(path)
     logging.info(f"找到 {len(md_files)} 个 Markdown 文件")
 
     # 删除未使用的图片
-    delete_unused_images(md_files, image_folder, backup_folder)
+    delete_unused_images(md_files, image_folder, backup_folder, enable_backup)
