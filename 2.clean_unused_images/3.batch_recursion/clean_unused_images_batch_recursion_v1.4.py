@@ -69,7 +69,7 @@ def extract_used_images(md_content, md_file):
 
     return used_images
 
-def delete_unused_images(md_files):
+def delete_unused_images(md_files, image_folder="image"):
     """删除未使用的图片"""
     total_unused_count = 0  # 总未使用图片数量
 
@@ -77,10 +77,10 @@ def delete_unused_images(md_files):
     for md_file in tqdm(md_files, desc="处理 Markdown 文件", unit="文件"):
         # 动态确定图片文件夹
         md_filename = os.path.splitext(os.path.basename(md_file))[0]  # 获取 Markdown 文件名（不含扩展名）
-        image_folder = os.path.join(os.path.dirname(md_file), "image", md_filename)  # 图片文件夹路径
+        image_folder_path = os.path.join(os.path.dirname(md_file), image_folder, md_filename)  # 图片文件夹路径
 
-        if not os.path.exists(image_folder):
-            print(f"{ICON_WARNING} 图片文件夹不存在: {image_folder}，跳过处理文件: {md_file}")
+        if not os.path.exists(image_folder_path):
+            print(f"{ICON_WARNING} 图片文件夹不存在: {image_folder_path}，跳过处理文件: {md_file}")
             continue
 
         # 提取当前 Markdown 文件中使用的图片路径
@@ -94,7 +94,7 @@ def delete_unused_images(md_files):
 
         # 获取图片文件夹中的所有文件
         all_images = set()
-        for root, _, files in os.walk(image_folder):
+        for root, _, files in os.walk(image_folder_path):
             for file in files:
                 file_path = os.path.normpath(os.path.join(root, file))
                 print(f"{ICON_FILE} 图片文件夹中的文件: {file_path}")
@@ -107,12 +107,16 @@ def delete_unused_images(md_files):
         # 删除未使用的图片
         if unused_images:
             print(f"\n{ICON_INFO} 正在处理文件: {md_file}")
-            print(f"{ICON_FOLDER} 图片文件夹: {image_folder}")
+            print(f"{ICON_FOLDER} 图片文件夹: {image_folder_path}")
             print(f"{ICON_WARNING} 未使用的图片数量: {len(unused_images)}")
             for image in tqdm(unused_images, desc="删除未使用的图片", unit="图片"):
                 try:
-                    os.remove(image)
-                    print(f"{ICON_SUCCESS} 删除成功: {image}")
+                    # 再次检查图片是否真的未使用
+                    if image not in used_images:
+                        os.remove(image)
+                        print(f"{ICON_SUCCESS} 删除成功: {image}")
+                    else:
+                        print(f"{ICON_WARNING} 图片 {image} 被误判为未使用，跳过删除")
                 except Exception as e:
                     print(f"{ICON_ERROR} 删除失败: {image}, 错误: {e}")
         else:
@@ -137,17 +141,20 @@ def find_markdown_files(path):
         print(f"{ICON_ERROR} 路径 {path} 不是有效的 Markdown 文件或目录。")
     return md_files
 """
-add
-1. 同时支持单文件，和目录递归清理本地未引用图片
-2. 添加图标，日志分级
+bug：误删图片image-20211218093256771.png
 """
 if __name__ == "__main__":
     # 设置 Markdown 文件或目录路径
     path = "C:\\Users\\codeh\\Desktop\\CSNote"  # 替换为你的 Markdown 文件或目录路径
+
+    # 设置图片保存路径（相对于当前处理的 Markdown 文件的相对路径）
+    # 默认值为 "image"，即图片路径为 ./image/markdown文件名
+    # 如果需要自定义路径，可以修改为其他值，例如 "custom_image_folder"
+    image_folder = "image"
 
     # 查找所有 Markdown 文件
     md_files = find_markdown_files(path)
     print(f"{ICON_INFO} 找到 {len(md_files)} 个 Markdown 文件")
 
     # 删除未使用的图片
-    delete_unused_images(md_files)
+    delete_unused_images(md_files, image_folder)

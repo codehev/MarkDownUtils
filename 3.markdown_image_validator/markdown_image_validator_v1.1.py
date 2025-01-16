@@ -5,9 +5,9 @@ from urllib.parse import urlparse, unquote
 import base64
 
 def extract_image_links(markdown_content):
-    """提取 Markdown 内容中的图片链接"""
-    # 匹配 Markdown 图片语法：![alt text](url)
-    pattern = r'!\[.*?\]\((.*?)\)'
+    """提取 Markdown 内容中的图片链接，支持带标题的形式"""
+    # 匹配 Markdown 图片语法：![alt text](url) 或 ![alt text](url "title")
+    pattern = r'!\[.*?\]\((.*?)(?:\s*".*?")?\)'
     return re.findall(pattern, markdown_content)
 
 def check_image_url(url):
@@ -95,10 +95,14 @@ def check_images_in_directory(directory):
         print(f"\n📄 文件: {file_path}")
         for image in invalid_images:
             print(f"❌ 无效图片: {image}")
-
+"""
+add
+1. 同时支持单文件，和目录递归检测md中无效图片
+2. 添加图标，日志分级
+"""
 if __name__ == "__main__":
     # 使用示例
-    target_path = "C:\\Users\\codeh\\Desktop\\CSNote\\Project"  # 替换为你的目录或文件路径
+    target_path = "C:\\Users\\codeh\\Desktop\\CSNote"  # 替换为你的目录或文件路径
     if Path(target_path).is_dir():
         # 如果是目录，递归检查
         check_images_in_directory(target_path)
