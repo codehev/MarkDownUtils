@@ -14,7 +14,6 @@ ICON_IMAGE = "🖼️"  # 图片信息
 
 def contains_url_encoding(path):
     """检查路径中是否包含合法的 URL 编码"""
-    # URL 编码的格式是 % 后跟两个十六进制字符
     url_encoding_pattern = r"%[0-9A-Fa-f]{2}"
     return re.search(url_encoding_pattern, path) is not None
 
@@ -28,6 +27,16 @@ def decode_path_if_encoded(path):
             return path
     return path
 
+def normalize_path(path, md_file):
+    """统一路径格式"""
+    # 解码 URL 编码
+    decoded_path = decode_path_if_encoded(path)
+    # 转换为绝对路径
+    abs_path = os.path.abspath(os.path.join(os.path.dirname(md_file), decoded_path))
+    # 规范化路径（统一路径分隔符）
+    abs_path = os.path.normpath(abs_path)
+    return abs_path
+
 def extract_used_images(md_content, md_file):
     """从 Markdown 内容中提取所有使用的图片路径"""
     used_images = set()
@@ -36,10 +45,8 @@ def extract_used_images(md_content, md_file):
     md_pattern = r"!\[.*?\]\((.*?)(?:\s+\".*?\")?\)"  # 支持带标题的图片
     for match in re.findall(md_pattern, md_content):
         if not match.startswith(("http://", "https://", "data:image")):
-            # 对路径进行解码（如果需要）
-            decoded_path = decode_path_if_encoded(match)
-            # 将路径转换为绝对路径
-            abs_path = os.path.normpath(os.path.join(os.path.dirname(md_file), decoded_path))
+            # 对路径进行解码和规范化
+            abs_path = normalize_path(match, md_file)
             print(f"{ICON_IMAGE} 提取的图片路径 (Markdown): {match} -> {abs_path}")
             used_images.add(abs_path)
 
@@ -47,10 +54,8 @@ def extract_used_images(md_content, md_file):
     html_pattern = r"<img.*?src=[\"'](.*?)[\"'].*?>"  # 支持带属性和样式的图片
     for match in re.findall(html_pattern, md_content):
         if not match.startswith(("http://", "https://", "data:image")):
-            # 对路径进行解码（如果需要）
-            decoded_path = decode_path_if_encoded(match)
-            # 将路径转换为绝对路径
-            abs_path = os.path.normpath(os.path.join(os.path.dirname(md_file), decoded_path))
+            # 对路径进行解码和规范化
+            abs_path = normalize_path(match, md_file)
             print(f"{ICON_IMAGE} 提取的图片路径 (HTML): {match} -> {abs_path}")
             used_images.add(abs_path)
 
@@ -60,10 +65,8 @@ def extract_used_images(md_content, md_file):
     ref_links = dict(re.findall(ref_link_pattern, md_content, re.MULTILINE))
     for match in re.findall(ref_pattern, md_content):
         if match in ref_links and not ref_links[match].startswith(("http://", "https://", "data:image")):
-            # 对路径进行解码（如果需要）
-            decoded_path = decode_path_if_encoded(ref_links[match])
-            # 将路径转换为绝对路径
-            abs_path = os.path.normpath(os.path.join(os.path.dirname(md_file), decoded_path))
+            # 对路径进行解码和规范化
+            abs_path = normalize_path(ref_links[match], md_file)
             print(f"{ICON_IMAGE} 提取的图片路径 (引用): {ref_links[match]} -> {abs_path}")
             used_images.add(abs_path)
 
@@ -96,7 +99,8 @@ def delete_unused_images(md_files, image_folder="image"):
         all_images = set()
         for root, _, files in os.walk(image_folder_path):
             for file in files:
-                file_path = os.path.normpath(os.path.join(root, file))
+                file_path = os.path.abspath(os.path.join(root, file))
+                file_path = os.path.normpath(file_path)
                 print(f"{ICON_FILE} 图片文件夹中的文件: {file_path}")
                 all_images.add(file_path)
 
@@ -141,7 +145,20 @@ def find_markdown_files(path):
         print(f"{ICON_ERROR} 路径 {path} 不是有效的 Markdown 文件或目录。")
     return md_files
 """
-bug：误删图片image-20211218093256771.png
+
+fix: 解决image-20211218093256771.png被误删的问题，是由于all_images和used_images这两set加入的文件路径规范不一样
+即使两set都有该图片路径，但all_images-used_images的结果还会保留该图片
+
+关键改进点
+路径规范化：
+使用 os.path.abspath 和 os.path.normpath 统一路径格式。
+确保所有路径在添加到集合之前都经过规范化处理。
+
+调试路径差异：
+打印出 all_images 和 used_images 中的路径，方便检查是否有不一致的地方。
+
+修复误删问题：
+通过路径规范化，确保 all_images 和 used_images 中的路径完全一致，避免误删。
 """
 if __name__ == "__main__":
     # 设置 Markdown 文件或目录路径
