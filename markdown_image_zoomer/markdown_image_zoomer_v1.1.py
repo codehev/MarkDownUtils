@@ -204,7 +204,12 @@ def process_file(input_file, zoom_factor=67, output_dir=None):
         logger.error(f"处理文件 {input_file} 失败: {e}")
 
     logger.info("文件处理完成！")
-
+"""
+优化点说明
+1. 支持目录递归
+2. 支持单文件处理
+3. 日志信息优化
+"""
 
 if __name__ == "__main__":
     # 配置
