@@ -145,5 +145,5 @@ def main(target_path):
 """
 if __name__ == "__main__":
     # 使用示例
-    target_path = "C:\\Users\\codeh\\Desktop\\CSNote"  # 替换为你的目录或文件路径
+    target_path = "C:\\Users\\codeh\\Desktop\\output"  # 替换为你的目录或文件路径
     main(target_path)
