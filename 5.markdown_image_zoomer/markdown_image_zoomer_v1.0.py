@@ -99,7 +99,9 @@ def process_markdown_images(markdown_file, zoom_factor=67, output_file=None):
     # 将更新后的内容写入输出文件
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(content)
-
+"""
+仅支持单文件
+"""
 
 if __name__ == "__main__":
     # 配置

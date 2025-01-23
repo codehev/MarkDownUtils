@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from typing import Dict, Tuple, Optional
 
+
 # 配置日志
 def setup_logger(log_file: str):
     """
@@ -33,6 +34,7 @@ def setup_logger(log_file: str):
 
     return logger
 
+
 # 初始化日志
 log_file = os.path.join(os.getcwd(), "markdown_image_downloader.log")
 logger = setup_logger(log_file)
@@ -40,18 +42,20 @@ logger = setup_logger(log_file)
 # 缓存已下载的图片
 image_cache: Dict[str, str] = {}
 
-def download_image(url: str, folder: str) -> Optional[str]:
+
+def download_image(url: str, folder: str, proxies: Optional[Dict[str, str]] = None) -> Optional[str]:
     """
     下载图片并保存到指定文件夹
     :param url: 图片的 URL
     :param folder: 图片保存文件夹
+    :param proxies: 代理配置，例如 {"http": "http://proxy-server:port", "https": "http://proxy-server:port"}
     :return: 本地图片路径（如果下载成功），否则返回 None
     """
     if url in image_cache:
         return image_cache[url]
 
     try:
-        response = requests.get(url, timeout=10, allow_redirects=True)
+        response = requests.get(url, timeout=10, allow_redirects=True, proxies=proxies)
         response.raise_for_status()  # 检查请求是否成功
 
         # 提取文件名
@@ -71,12 +75,14 @@ def download_image(url: str, folder: str) -> Optional[str]:
         logger.error(f"下载失败: {url}, 错误: {e}")
     return None
 
-def replace_image_links(md_content: str, folder: str, md_file: str) -> str:
+
+def replace_image_links(md_content: str, folder: str, md_file: str, proxies: Optional[Dict[str, str]] = None) -> str:
     """
     替换 Markdown 内容中的在线图片链接为本地路径
     :param md_content: Markdown 文件内容
     :param folder: 图片保存文件夹
     :param md_file: Markdown 文件路径
+    :param proxies: 代理配置
     :return: 替换后的 Markdown 内容
     """
     # 正则表达式匹配多种图片引用格式
@@ -122,7 +128,7 @@ def replace_image_links(md_content: str, folder: str, md_file: str) -> str:
 
         if url:
             if url.startswith(("http://", "https://")):  # 在线图片
-                local_path = download_image(url, folder)
+                local_path = download_image(url, folder, proxies=proxies)
                 if local_path:
                     # 替换为相对路径
                     relative_path = os.path.relpath(local_path, os.path.dirname(md_file))
@@ -176,11 +182,13 @@ def replace_image_links(md_content: str, folder: str, md_file: str) -> str:
 
     return new_content
 
-def process_markdown_file(md_file: str, image_folder: Optional[str] = None):
+
+def process_markdown_file(md_file: str, image_folder: Optional[str] = None, proxies: Optional[Dict[str, str]] = None):
     """
     处理单个 Markdown 文件，下载在线图片并替换链接
     :param md_file: Markdown 文件路径
     :param image_folder: 图片保存文件夹（可选，默认为 ./image/markdown文件名）
+    :param proxies: 代理配置
     """
     # 获取 Markdown 文件名（不含扩展名）
     md_filename = os.path.splitext(os.path.basename(md_file))[0]
@@ -204,7 +212,7 @@ def process_markdown_file(md_file: str, image_folder: Optional[str] = None):
         return
 
     # 替换在线图片链接为本地相对路径
-    new_content = replace_image_links(content, image_folder, md_file)
+    new_content = replace_image_links(content, image_folder, md_file, proxies=proxies)
 
     # 保存修改后的 Markdown 文件
     try:
@@ -216,6 +224,7 @@ def process_markdown_file(md_file: str, image_folder: Optional[str] = None):
 
     # 在每个文件处理完成后打印空行
     logger.info("")
+
 
 def find_markdown_files(folder: str) -> list:
     """
@@ -230,11 +239,13 @@ def find_markdown_files(folder: str) -> list:
                 md_files.append(os.path.join(root, file))
     return md_files
 
-def process_markdown_folder(folder: str, image_folder: Optional[str] = None):
+
+def process_markdown_folder(folder: str, image_folder: Optional[str] = None, proxies: Optional[Dict[str, str]] = None):
     """
     处理指定文件夹及其子文件夹下的所有 Markdown 文件
     :param folder: Markdown 文件所在文件夹
     :param image_folder: 图片保存文件夹（可选，默认为 ./image/markdown文件名）
+    :param proxies: 代理配置
     """
     # 递归查找所有 Markdown 文件
     md_files = find_markdown_files(folder)
@@ -243,39 +254,29 @@ def process_markdown_folder(folder: str, image_folder: Optional[str] = None):
     # 处理每个 Markdown 文件
     for md_file in md_files:
         logger.info(f"=== 处理文件: {md_file} ===")
-        process_markdown_file(md_file, image_folder)
+        process_markdown_file(md_file, image_folder, proxies=proxies)
 
-def main(input_path: str, image_folder: Optional[str] = None):
+
+def main(input_path: str, image_folder: Optional[str] = None, proxies: Optional[Dict[str, str]] = None):
     """
     主函数，根据输入路径是文件还是文件夹进行处理
     :param input_path: 输入的 Markdown 文件或文件夹路径
     :param image_folder: 图片保存文件夹（可选，默认为 ./image/markdown文件名）
+    :param proxies: 代理配置
     """
     if os.path.isfile(input_path) and input_path.endswith(".md"):
         # 如果是单个 Markdown 文件
         logger.info(f"=== 处理文件: {input_path} ===")
-        process_markdown_file(input_path, image_folder)
+        process_markdown_file(input_path, image_folder, proxies=proxies)
     elif os.path.isdir(input_path):
         # 如果是文件夹
-        process_markdown_folder(input_path, image_folder)
+        process_markdown_folder(input_path, image_folder, proxies=proxies)
     else:
         logger.error(f"输入路径无效: {input_path}")
+
+
 """
-主要优化点：
-去掉进度条：
-移除了 tqdm 进度条（打印出来是乱的），改用日志提示信息来展示进度。
-
-
-日志提示信息：
-在处理每个文件和图片时，输出详细的日志信息。
-日志信息包括文件处理进度、图片下载成功/失败情况等。
-
-日志格式：
-日志文件包含时间、日志级别和详细信息。
-控制台日志只显示简洁的提示信息。
-
-并发下载：
-使用 ThreadPoolExecutor 实现多线程下载，提升效率。
+新增代理参数
 """
 if __name__ == "__main__":
     # 设置输入路径（可以是单个 Markdown 文件或文件夹）
@@ -284,5 +285,11 @@ if __name__ == "__main__":
     # 设置图片保存路径（可选，默认为 ./image/markdown文件名）
     image_folder = "./image"  # 替换为你的自定义相对路径，或设置为 None 使用默认路径
 
+    # 设置代理（可选）
+    proxies = {
+        "http": "http://127.0.0.1:7890",  # 替换为你的 HTTP 代理地址
+        "https": "http://127.0.0.1:7890",  # 替换为你的 HTTPS 代理地址
+    }
+
     # 处理输入路径
-    main(input_path, image_folder)
+    main(input_path, image_folder, proxies=proxies)
