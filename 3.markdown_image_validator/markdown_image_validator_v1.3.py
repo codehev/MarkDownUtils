@@ -157,11 +157,11 @@ if __name__ == "__main__":
     # 设置代理（可选），如果不需要代理，可以将 proxies 设置为 None
     proxies = {
         "http": "http://127.0.0.1:7890",  # 替换为你的 HTTP 代理地址
-        "https": "http://127.0.0.1:7890",  # 替换为你的 HTTPS 代理地址
+        "https": "https://127.0.0.1:7890",  # 替换为你的 HTTPS 代理地址
     }
 
     # 目标路径
-    target_path = "C:\\Users\\codeh\\Desktop\\output"  # 替换为你的目录或文件路径
+    target_path = "C:\\Users\\codeh\\Desktop\\SoftwareTesting.md"  # 替换为你的目录或文件路径
 
     # 调用主函数
     main(target_path, proxies=proxies)
