@@ -285,7 +285,7 @@ if __name__ == "__main__":
     # 设置图片保存路径（可选，默认为 ./image/markdown文件名）
     image_folder = "./image"  # 替换为你的自定义相对路径，或设置为 None 使用默认路径
 
-    # 设置代理（可选）
+    # 设置代理（可选），如果不需要代理，可以将 proxies 设置为 None
     proxies = {
         "http": "http://127.0.0.1:7890",  # 替换为你的 HTTP 代理地址
         "https": "http://127.0.0.1:7890",  # 替换为你的 HTTPS 代理地址
